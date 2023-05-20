@@ -1,0 +1,263 @@
+import pygame
+import random
+WINDOW_WIDTH = 800
+WINDOW_HEIGHT = 600
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+PLAYER_WIDTH = 64
+PLAYER_HEIGHT = 64
+PLAYER_SPEED = 5
+ENEMY_WIDTH = 64
+ENEMY_HEIGHT = 64
+ENEMY_SPEED = 1.5
+ENEMY_ROWS = 1
+ENEMY_COLS = 3
+ENEMY_SPAWN_INTERVAL = 1500  # milliseconds
+ENEMY_MOVE_DOWN_DISTANCE = 20
+ENEMY_RANDOM_MOVE_INTERVAL = 1000 
+ENEMY_RANDOM_MOVE_RANGE = 20
+ENEMY_SHOOT_INTERVAL = 2000  
+ENEMY_BULLET_SPEED = 5
+BULLET_WIDTH = 8
+BULLET_HEIGHT = 32
+BULLET_SPEED = 8
+
+
+pygame.init()
+window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+pygame.display.set_caption("Space Invaders")
+
+
+player_img = pygame.image.load("player.png").convert_alpha()
+enemy_img = pygame.image.load("enemy.png").convert_alpha()
+bullet_img = pygame.image.load("bullet.png").convert_alpha()
+
+
+# Resize images
+player_img = pygame.transform.scale(player_img, (PLAYER_WIDTH, PLAYER_HEIGHT))
+enemy_img = pygame.transform.scale(enemy_img, (ENEMY_WIDTH, ENEMY_HEIGHT))
+bullet_img = pygame.transform.scale(bullet_img, (BULLET_WIDTH, BULLET_HEIGHT))
+
+
+
+clock = pygame.time.Clock()
+
+class Player(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = player_img
+        self.rect = self.image.get_rect()
+        self.rect.centerx = WINDOW_WIDTH // 2
+        self.rect.bottom = WINDOW_HEIGHT - 10
+        self.score = 0
+
+    def update(self):
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT] and self.rect.left > 0:
+            self.rect.x -= PLAYER_SPEED
+        if keys[pygame.K_RIGHT] and self.rect.right < WINDOW_WIDTH:
+            self.rect.x += PLAYER_SPEED
+
+    def shoot(self):
+        bullet = Bullet(self.rect.centerx, self.rect.top)
+        all_sprites.add(bullet)
+        bullets.add(bullet)
+
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = enemy_img
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.direction = 1  # 1 represents moving right, -1 represents moving left
+        self.movement_timer = pygame.time.get_ticks()
+        self.shoot_timer = pygame.time.get_ticks()
+
+    
+
+    def update(self):
+        self.rect.x += self.direction * ENEMY_SPEED
+
+        current_time = pygame.time.get_ticks()
+        if current_time - self.movement_timer > ENEMY_RANDOM_MOVE_INTERVAL:
+            self.rect.x += random.randint(-ENEMY_RANDOM_MOVE_RANGE, ENEMY_RANDOM_MOVE_RANGE)
+            self.movement_timer = current_time
+
+        if current_time - self.shoot_timer > ENEMY_SHOOT_INTERVAL:
+            bullet = EnemyBullet(self.rect.centerx, self.rect.bottom)
+            all_sprites.add(bullet)
+            enemy_bullets.add(bullet)
+            self.shoot_timer = current_time
+
+        if self.rect.right >= WINDOW_WIDTH or self.rect.left <= 0:
+            self.direction *= -1  # Change direction if hitting the side of the screen
+
+        # Check for collisions between enemies
+        enemy_collisions = pygame.sprite.spritecollide(self, enemies, False)
+        enemy_collisions.remove(self)  # Remove self from the collision list
+        if len(enemy_collisions) > 0:
+            self.direction *= -1  # Change direction if colliding with another enemy
+
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = bullet_img
+        self.rect = self.image.get_rect()
+        self.rect.centerx = x
+        self.rect.bottom = y
+
+    def update(self):
+        self.rect.y -= BULLET_SPEED
+        if self.rect.bottom < 0:
+            self.kill()
+
+class EnemyBullet(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = pygame.transform.rotate(bullet_img, 180)  # Flip the bullet image
+        self.rect = self.image.get_rect()
+        self.rect.centerx = x
+        self.rect.top = y
+
+    def update(self):
+        self.rect.y += ENEMY_BULLET_SPEED
+        if self.rect.top > WINDOW_HEIGHT:
+            self.kill()
+
+def show_game_over_screen():
+    global game_over
+
+    window.fill(BLACK)
+    font = pygame.font.Font(None, 48)
+    game_over_text = font.render("Game Over", True, WHITE)
+    restart_text = font.render("Restart", True, WHITE)
+
+    game_over_rect = game_over_text.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 50))
+    restart_rect = restart_text.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 50))
+
+    # Draw the game over screen
+    window.blit(game_over_text, game_over_rect)
+    window.blit(restart_text, restart_rect)
+
+    restart_button_area = pygame.Rect(
+        restart_rect.left - 10,
+        restart_rect.top - 10,
+        restart_rect.width + 20,
+        restart_rect.height + 20
+    )
+
+    pygame.display.flip()
+
+    # Wait for the player to click the restart button
+    waiting = True
+    while waiting:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:  # Left mouse button
+                    mouse_pos = pygame.mouse.get_pos()
+                    if restart_button_area.collidepoint(mouse_pos):
+                        waiting = False
+                        # Reset game state and clear sprite groups
+                        all_sprites.empty()
+                        enemies.empty()
+                        bullets.empty()
+                        enemy_bullets.empty()
+
+                        # Recreate player and add to sprite groups
+                        player = Player()
+                        all_sprites.add(player)
+                        player_group.add(player)
+
+                        # Reset game variables
+                        player.score = 0
+                        game_over = False
+                        enemy_spawn_time = pygame.time.get_ticks()
+
+                        # Hide the mouse cursor
+                        pygame.mouse.set_visible(False)
+
+    game_over = False
+
+
+
+all_sprites = pygame.sprite.Group()
+enemies = pygame.sprite.Group()
+bullets = pygame.sprite.Group()
+enemy_bullets = pygame.sprite.Group()
+player_group = pygame.sprite.Group()
+
+player = Player()
+all_sprites.add(player)
+player_group.add(player)
+
+
+enemy_spawn_time = pygame.time.get_ticks()
+
+game_over = False
+
+# Game loop
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        elif event.type == pygame.KEYDOWN:
+            if game_over and event.key == pygame.K_RETURN:
+                game_over = False
+                player.score = 0
+                all_sprites.empty()
+                enemies.empty()
+                bullets.empty()
+                enemy_bullets.empty()
+                player.rect.centerx = WINDOW_WIDTH // 2
+                player.rect.bottom = WINDOW_HEIGHT - 10
+                enemy_spawn_time = pygame.time.get_ticks()
+
+            if not game_over and event.key == pygame.K_SPACE:
+                player.shoot()
+
+    if not game_over:
+        all_sprites.update()
+
+
+        current_time = pygame.time.get_ticks()
+        if current_time - enemy_spawn_time > ENEMY_SPAWN_INTERVAL:
+            for row in range(ENEMY_ROWS):
+                for col in range(ENEMY_COLS):
+                    new_enemy = Enemy(col * (ENEMY_WIDTH + 100) + 150, row * (ENEMY_HEIGHT + 50) + 100)
+                    
+                    # Check if the new enemy is too close to any existing enemies
+                    too_close = pygame.sprite.spritecollideany(new_enemy, enemies, pygame.sprite.collide_rect_ratio(1))
+                    if too_close:
+                        continue  
+
+                    all_sprites.add(new_enemy)
+                    enemies.add(new_enemy)
+            enemy_spawn_time = current_time
+
+        # Check for collisions between bullets and enemies
+        hits = pygame.sprite.groupcollide(bullets, enemies, True, True)
+        for bullet in hits:
+            player.score += 10
+
+        # Check for collisions between player and enemies
+        hits = pygame.sprite.spritecollide(player, enemy_bullets, True)
+        if hits:
+            game_over = True
+            show_game_over_screen()
+
+        window.fill(BLACK)
+        all_sprites.draw(window)
+
+        # Draw score on the screen
+        font = pygame.font.Font(None, 36)
+        text = font.render("Score: " + str(player.score), True, WHITE)
+        window.blit(text, (10, 10))
+
+        pygame.display.flip()
+        clock.tick(60)
+
+pygame.quit()
