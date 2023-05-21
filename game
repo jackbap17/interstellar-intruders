@@ -22,11 +22,12 @@ BULLET_WIDTH = 8*3
 BULLET_HEIGHT = 32
 BULLET_SPEED = 8
 
-
 pygame.init()
+pygame.mixer.init()
 window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("Interstellar Intruders")
 
+missile_sound = pygame.mixer.Sound("missile-sound.mp3")
 
 player_img = pygame.image.load("player.png").convert_alpha()
 enemy_img = pygame.image.load("enemy.png").convert_alpha()
@@ -60,6 +61,7 @@ class Player(pygame.sprite.Sprite):
 
     def shoot(self):
         bullet = Bullet(self.rect.centerx, self.rect.top)
+        missile_sound.play()
         all_sprites.add(bullet)
         bullets.add(bullet)
 
@@ -87,6 +89,7 @@ class Enemy(pygame.sprite.Sprite):
         if current_time - self.shoot_timer > ENEMY_SHOOT_INTERVAL:
             bullet = EnemyBullet(self.rect.centerx, self.rect.bottom)
             all_sprites.add(bullet)
+            missile_sound.play()
             enemy_bullets.add(bullet)
             self.shoot_timer = current_time
 
@@ -138,7 +141,8 @@ def show_game_over_screen():
 
     # Draw the game over screen
     window.blit(game_over_text, game_over_rect)
-    window.blit(restart_text, restart_rect)
+    
+    # window.blit(restart_text, restart_rect)
 
     restart_button_area = pygame.Rect(
         restart_rect.left - 10,
@@ -216,7 +220,7 @@ while running:
                 player.rect.bottom = WINDOW_HEIGHT - 10
                 enemy_spawn_time = pygame.time.get_ticks()
 
-            while not game_over and event.key == pygame.K_SPACE:
+            if not game_over and event.key == pygame.K_SPACE:
                 player.shoot()
 
     if not game_over:
