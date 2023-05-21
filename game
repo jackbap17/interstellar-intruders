@@ -18,14 +18,14 @@ ENEMY_RANDOM_MOVE_INTERVAL = 1000
 ENEMY_RANDOM_MOVE_RANGE = 20
 ENEMY_SHOOT_INTERVAL = 2000  
 ENEMY_BULLET_SPEED = 5
-BULLET_WIDTH = 8
+BULLET_WIDTH = 8*3
 BULLET_HEIGHT = 32
 BULLET_SPEED = 8
 
 
 pygame.init()
 window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-pygame.display.set_caption("Space Invaders")
+pygame.display.set_caption("Interstellar Intruders")
 
 
 player_img = pygame.image.load("player.png").convert_alpha()
@@ -216,7 +216,7 @@ while running:
                 player.rect.bottom = WINDOW_HEIGHT - 10
                 enemy_spawn_time = pygame.time.get_ticks()
 
-            if not game_over and event.key == pygame.K_SPACE:
+            while not game_over and event.key == pygame.K_SPACE:
                 player.shoot()
 
     if not game_over:
