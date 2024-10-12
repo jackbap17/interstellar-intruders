@@ -1,8 +1,11 @@
 # Overview
 
-this is a simple space shooter. use the arrows to move and space to shoot
-destroy the enemies
-avoid their missiles
+This is a simple space shooter. 
+Use the arrows to move and space to shoot
+Destroy the enemies
+Avoid their missiles
+
+[Software Demo Video](https://youtu.be/As_Za5n9xuE)
 
 # Development Environment
 
